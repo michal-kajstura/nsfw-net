@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from torch.optim.optimizer import Optimizer
 from tqdm import tqdm
+import mlflow
 
 class Trainer:
     def __init__(self, model: nn.Module,
@@ -14,6 +15,7 @@ class Trainer:
         self._loss_function = loss_function
         self._scheduler = scheduler
         self._device = device
+        self._step = 0
 
     def train(self, train_loader, validation_loader=None, epochs=5):
         for epoch in range(epochs):
@@ -32,6 +34,7 @@ class Trainer:
 
             logits = self._model(images)
             loss = self._loss_function(logits, labels)
+            mlflow.log_metric('train_loss', loss.item(), self._step)
 
             self._optimizer.zero_grad()
             loss.backward()
@@ -51,5 +54,6 @@ class Trainer:
 
                 accumulated_loss += loss.item()
 
-        return accumulated_loss / len(loader)
+        average_loss = accumulated_loss / len(loader)
+        mlflow.log_metric('validation_loss', average_loss, self._step)
 
