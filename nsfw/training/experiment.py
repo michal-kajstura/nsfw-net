@@ -10,7 +10,7 @@ from PIL.Image import Image
 from sklearn.model_selection import train_test_split
 from torch import nn, Tensor
 from torch.optim import Adam
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, SubsetRandomSampler
 
 from nsfw.model.classifier import NsfwClassifier
 from nsfw.training.dataset import NsfwDataset
@@ -35,8 +35,8 @@ class Experiment:
 def create_loaders(neutral_images_path: Path, nsfw_images_path: Path,
                    transform: Optional[Callable[[Image], Tensor]] = None)\
         -> Tuple[DataLoader, DataLoader]:
-    nsfw_filenames = _scan_filenames(nsfw_images_path)
-    neutral_filenames = _scan_filenames(neutral_images_path)
+    nsfw_filenames = _scan_filenames(nsfw_images_path)[:50]
+    neutral_filenames = _scan_filenames(neutral_images_path)[:50]
 
     fnames_labels = merge_filenames_and_labels([nsfw_filenames, neutral_filenames], [1, 0])
     x, y = zip(*fnames_labels)
@@ -47,11 +47,11 @@ def create_loaders(neutral_images_path: Path, nsfw_images_path: Path,
 
     train_loader = DataLoader(
         NsfwDataset(x_train, y_train, transform=transform),
-        shuffle=True, batch_size=4,
+        shuffle=True, batch_size=32,
     )
     val_loader = DataLoader(
         NsfwDataset(x_val, y_val, transform=transform),
-        shuffle=True, batch_size=4,
+        shuffle=True, batch_size=32,
     )
 
     return train_loader, val_loader

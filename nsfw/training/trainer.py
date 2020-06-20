@@ -9,7 +9,7 @@ from tqdm import tqdm
 import mlflow
 
 from nsfw.model.classifier import NsfwClassifier
-
+from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 
 class Trainer:
     def __init__(self, model: nn.Module,
@@ -18,7 +18,7 @@ class Trainer:
                  scheduler=None,
                  device=torch.device('cpu'),
                  checkpoint_path: Optional[Path] = None):
-        self._model = model
+        self._model = model.to(device)
         self._optimizer = optimizer
         self._loss_function = loss_function
         self._scheduler = scheduler
@@ -34,8 +34,8 @@ class Trainer:
             self._train_loop(train_loader)
 
             if validation_loader:
-                loss = self._validation_loop(validation_loader)
-                mlflow.log_metric('validation_loss', loss, self._step)
+                self._validation_loop(validation_loader)
+
                 if self._checkpoint_path:
                     self._save_checkpoint(Path(self._checkpoint_path, f'{epoch}.pth'))
 
@@ -57,6 +57,7 @@ class Trainer:
     def _validation_loop(self, loader):
         self._model.eval()
         accumulated_loss = 0.
+        pred_true_labels = [], []
         with torch.no_grad():
             for images, labels in tqdm(loader):
                 images = images.to(self._device)
@@ -65,10 +66,28 @@ class Trainer:
                 logits = self._model(images)
                 loss = self._loss_function(logits, labels)
 
+                preds = logits.argmax(dim=1)
+
+                pred_true_labels[0].extend(preds.detach().cpu().numpy().tolist())
+                pred_true_labels[1].extend(labels.detach().cpu().numpy().tolist())
+
                 accumulated_loss += loss.item()
 
         average_loss = accumulated_loss / len(loader)
-        return average_loss
+        fscore = f1_score(pred_true_labels[1], pred_true_labels[0])
+        accuracy = accuracy_score(pred_true_labels[1], pred_true_labels[0])
+        confusion = confusion_matrix(pred_true_labels[1], pred_true_labels[0])
+        tn, fp, fn, tp = confusion.ravel()
+        mlflow.log_metric('validation_loss', average_loss, self._step)
+        mlflow.log_metric('validation_accuracy', accuracy, self._step)
+        mlflow.log_metric('validation_fscore', fscore, self._step)
+
+        mlflow.log_metric('tn', tn, self._step)
+        mlflow.log_metric('fn', fp, self._step)
+        mlflow.log_metric('fn', fn, self._step)
+        mlflow.log_metric('tp', tp, self._step)
+
+
 
     def _save_checkpoint(self, checkpoint_path: Path):
         checkpoint_path.touch(exist_ok=True)
