@@ -1,12 +1,12 @@
 import numpy as np
 from PIL import Image
-
+from tqdm import tqdm
 
 def compute_dataset_stats(examples):
     mean = 0.
     var = 0.
     positive_count = 0
-    for example_path, label in examples:
+    for example_path, label in tqdm(examples):
         image = np.array(Image.open(example_path).resize((224, 244))) / 255
         image = image[..., :3]
 

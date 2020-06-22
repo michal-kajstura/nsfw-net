@@ -19,7 +19,8 @@ class Experiment:
                                               monitor='valid_loss',
                                               mode='min')
         self._trainer = Trainer(checkpoint_callback=checkpoint_callback,
-                                gpus=use_gpus)
+                                gpus=use_gpus,
+                                val_check_interval=0.25)
 
     def run(self):
         with mlflow.start_run():

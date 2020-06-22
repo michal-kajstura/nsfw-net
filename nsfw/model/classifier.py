@@ -2,7 +2,7 @@ import torch.nn as nn
 from torchvision import models
 
 class NsfwClassifier(nn.Module):
-    def __init__(self, num_classes=2, freeze_backbone=False):
+    def __init__(self, num_classes=1, freeze_backbone=False):
         super().__init__()
         self._backbone = self._init_backbone(num_classes, freeze_backbone)
 
@@ -20,5 +20,5 @@ class NsfwClassifier(nn.Module):
         return backbone
 
     def forward(self, inputs):
-        return self._backbone(inputs)
+        return self._backbone(inputs).flatten()
 
