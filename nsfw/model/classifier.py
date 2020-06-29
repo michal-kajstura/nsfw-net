@@ -1,13 +1,14 @@
 import torch.nn as nn
 from torchvision import models
 
+
 class NsfwClassifier(nn.Module):
-    def __init__(self, num_classes=1, freeze_backbone=False):
+    def __init__(self, freeze_backbone: bool = False):
         super().__init__()
-        self._backbone = self._init_backbone(num_classes, freeze_backbone)
+        self._backbone = self._init_backbone(freeze_backbone)
 
     @staticmethod
-    def _init_backbone(num_classes: int, freeze_backbone: bool) -> nn.Module:
+    def _init_backbone(freeze_backbone: bool) -> nn.Module:
         backbone = models.resnet50(pretrained=True)
 
         if freeze_backbone:
@@ -16,7 +17,9 @@ class NsfwClassifier(nn.Module):
 
         # Attach new classification head
         last_layer_features_num = backbone.fc.in_features
-        backbone.fc = nn.Linear(last_layer_features_num, num_classes)
+        head = nn.Linear(last_layer_features_num, 1)
+        nn.init.kaiming_normal_(head.weight)
+        backbone.fc = head
         return backbone
 
     def forward(self, inputs):

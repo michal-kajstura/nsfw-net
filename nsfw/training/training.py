@@ -4,6 +4,7 @@ from pytorch_lightning import LightningModule
 from sklearn.model_selection import train_test_split
 from torch import nn
 from torch.optim import Adam
+from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 from sklearn.metrics import f1_score, confusion_matrix
 import torch.nn.functional as F
@@ -16,10 +17,7 @@ class NsfwSystem(LightningModule):
     def __init__(self, config, transforms):
         super().__init__()
         self._classifier = NsfwClassifier()
-        self._loss = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(config['negative_ratio'] / config['positive_ratio']))
-           # pos_weight=torch.tensor([1. - config[ratio]
-           #                      for ratio
-          #                       in ['negative_ratio', 'positive_ratio']]))
+        self._loss = nn.BCEWithLogitsLoss()
         self._transforms = transforms
         self._config = config
 
@@ -43,8 +41,7 @@ class NsfwSystem(LightningModule):
         logits = self.forward(x)
         loss = self._loss(logits, y)
         preds = F.softmax(logits, dim=0) > 0.5
-        mlflow.log_metric('valid_loss', loss.item(), self.global_step)
-        return {'valid_loss': loss, 'true': y, 'preds': preds}
+        return {'valid_loss': loss.detach(), 'true': y.detach(), 'preds': preds.detach()}
 
     def validation_epoch_end(self, outputs):
         avg_loss = torch.stack([x['valid_loss'] for x in outputs]).mean()
@@ -70,7 +67,7 @@ class NsfwSystem(LightningModule):
         neutral_filenames = _scan_filenames(self._config['neutral_path'])
         fnames_labels = merge_filenames_and_labels([nsfw_filenames, neutral_filenames], [1, 0])
         train, val = train_test_split(
-            fnames_labels, shuffle=True, random_state=123
+            fnames_labels, shuffle=True, random_state=123, test_size=0.1
         )
         self._data = train, val
 
@@ -91,7 +88,10 @@ class NsfwSystem(LightningModule):
         )
 
     def configure_optimizers(self):
-        return Adam(self._classifier.parameters(), self._config['lr'])
+        optimizer = Adam(self._classifier.parameters(), self._config['lr'])
+        schedulder = StepLR(optimizer, step_size=4, gamma=0.1)
+        return [optimizer], [schedulder]
+
 
 
 
