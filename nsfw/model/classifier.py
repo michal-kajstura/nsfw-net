@@ -9,7 +9,7 @@ class NsfwClassifier(nn.Module):
 
     @staticmethod
     def _init_backbone(freeze_backbone: bool) -> nn.Module:
-        backbone = models.resnet50(pretrained=True)
+        backbone = models.resnet101(pretrained=True)
 
         if freeze_backbone:
             for param in backbone.parameters():

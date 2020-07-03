@@ -12,12 +12,11 @@ class Experiment:
     def __init__(self, checkpoint_path: Path, config: Dict[str, Any], transforms,
                  use_gpus: Optional[List[int]] = None):
         self._nsfw_system = NsfwSystem(config, transforms)
-
         checkpoint_callback = ModelCheckpoint(str(checkpoint_path),
                                               save_top_k=True,
                                               verbose=True,
-                                              monitor='valid_loss',
-                                              mode='min')
+                                              monitor='accuracy',
+                                              mode='max')
         self._trainer = Trainer(checkpoint_callback=checkpoint_callback,
                                 gpus=use_gpus,
                                 val_check_interval=0.2)

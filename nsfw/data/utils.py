@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Tuple
 
 
-def _scan_filenames(path: Path, extensions: Tuple[str, ...] = ('jpg', 'png')):
+def _scan_filenames(path: Path, extensions: Tuple[str, ...] = ('jpg', 'jpeg', 'png')):
     return list(itertools.chain.from_iterable(
         path.rglob(f'*.{ext}') for ext in extensions
     ))
